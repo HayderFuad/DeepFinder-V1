@@ -1,0 +1,6 @@
+{
+  "name": "DeepFinder",
+  "description": "محرك البحث الذكي الشامل للهاتف - بحث فوري في أسماء ومحتوى الملفات والمستندات",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

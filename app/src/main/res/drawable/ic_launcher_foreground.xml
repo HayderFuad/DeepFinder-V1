@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Back document sheet -->
+    <path
+        android:pathData="M38,26 L64,26 C66.2,26 68,27.8 68,30 L68,60 C68,62.2 66.2,64 64,64 L38,64 C35.8,64 34,62.2 34,60 L34,30 C34,27.8 35.8,26 38,26 Z"
+        android:fillColor="#334155" />
+
+    <!-- Front document sheet -->
+    <path
+        android:pathData="M30,34 L56,34 C58.2,34 60,35.8 60,38 L60,68 C60,70.2 58.2,72 56,72 L30,72 C27.8,72 26,70.2 26,68 L26,38 C26,35.8 27.8,34 30,34 Z"
+        android:fillColor="#1E293B" />
+    <!-- Document text lines -->
+    <path
+        android:pathData="M32,42 L52,42 M32,48 L50,48 M32,54 L46,54 M32,60 L42,60"
+        android:strokeColor="#64748B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- Magnifying Glass Lens Outer Glow & Ring -->
+    <path
+        android:pathData="M52,50m-16,0a16,16 0 1,1 32,0a16,16 0 1,1 -32,0"
+        android:strokeWidth="4"
+        android:strokeColor="#00E5FF"
+        android:fillColor="#1800E5FF" />
+
+    <!-- Scanning beam inside lens -->
+    <path
+        android:pathData="M40,50 L64,50"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+
+    <!-- Magnifying Glass Handle -->
+    <path
+        android:pathData="M64,62 L78,76"
+        android:strokeWidth="5"
+        android:strokeColor="#38EF7D"
+        android:strokeLineCap="round" />
+
+    <!-- Sparkling search nodes -->
+    <path
+        android:pathData="M74,32 L75,35 L78,36 L75,37 L74,40 L73,37 L70,36 L73,35 Z"
+        android:fillColor="#00E5FF" />
+</vector>
