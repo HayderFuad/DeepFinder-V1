@@ -28,9 +28,9 @@ fun FilterChipsRow(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 2.dp)
             .testTag("filter_chips_row"),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         SearchFilter.entries.forEach { filter ->
             val isSelected = filter == selectedFilter

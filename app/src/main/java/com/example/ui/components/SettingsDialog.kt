@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,8 +26,6 @@ import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,8 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsDialog(
     themeMode: String,
@@ -53,14 +55,19 @@ fun SettingsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.testTag("settings_dialog"),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("settings_dialog"),
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
@@ -69,7 +76,9 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "إعدادات DeepFinder",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
@@ -84,7 +93,7 @@ fun SettingsDialog(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                // إعداد المظهر (Dark / Light / System)
+                // إعداد المظهر المتجاوب مع جميع أحجام الشاشات
                 Text(
                     text = "مظهر التطبيق (Theme):",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -92,9 +101,10 @@ fun SettingsDialog(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     FilterChip(
                         selected = themeMode == "SYSTEM",
@@ -131,7 +141,9 @@ fun SettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(

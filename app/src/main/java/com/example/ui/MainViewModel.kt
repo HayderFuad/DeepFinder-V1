@@ -64,25 +64,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled.asStateFlow()
 
     init {
-        // مراقبة حقل البحث مع Debounce 300ms
+        viewModelScope.launch {
+            // إزالة أي ملفات تجريبية افتراضية قديمة فور التشغيل
+            FileIndexer.cleanupLegacyDemoFiles(getApplication())
+
+            val count = repository.getTotalCount()
+            if (count == 0 && FileHelper.hasStoragePermission(getApplication())) {
+                startIndexing()
+            } else {
+                performSearch(_searchQuery.value, _selectedFilter.value)
+            }
+        }
+
+        // مراقبة حقل البحث مع Debounce 250ms
         viewModelScope.launch {
             combine(
-                _searchQuery.debounce(300).distinctUntilChanged(),
+                _searchQuery.debounce(250).distinctUntilChanged(),
                 _selectedFilter
             ) { query, filter ->
                 query to filter
             }.collect { (query, filter) ->
                 performSearch(query, filter)
-            }
-        }
-
-        // بدء الفهرسة التلقائية عند تشغيل التطبيق لأول مرة أو إذا كان الفهرس فارغاً
-        viewModelScope.launch {
-            val count = repository.getTotalCount()
-            if (count == 0) {
-                startIndexing()
-            } else {
-                performSearch("", SearchFilter.ALL)
             }
         }
     }
@@ -132,7 +134,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateStoragePermissionStatus() {
-        _hasStoragePermission.value = FileHelper.hasStoragePermission(getApplication())
+        val hadPermission = _hasStoragePermission.value
+        val nowHasPermission = FileHelper.hasStoragePermission(getApplication())
+        _hasStoragePermission.value = nowHasPermission
+        if (!hadPermission && nowHasPermission) {
+            startIndexing(clearExisting = false)
+        }
     }
 
     fun onBiometricUnlocked() {

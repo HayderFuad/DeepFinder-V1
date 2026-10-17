@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -64,6 +66,7 @@ import com.example.util.FileHelper
 import com.example.util.FileType
 import java.io.File
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FileResultCard(
     result: SearchResult,
@@ -81,7 +84,7 @@ fun FileResultCard(
             .fillMaxWidth()
             .testTag("file_result_card_${result.file.id}")
             .clickable { onOpen(fileObj) },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
         ),
@@ -90,16 +93,16 @@ fun FileResultCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
-            // الصف العلوي: الأيقونة، الاسم، وشارة نوع التطابق
+            // الصف العلوي: الأيقونة والاسم والمسار بتصميم مرن لكل الشاشات
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(typeColor.copy(alpha = 0.18f)),
                     contentAlignment = Alignment.Center
@@ -124,11 +127,11 @@ fun FileResultCard(
                     Text(
                         text = highlightedName,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
                         text = result.file.filePath,
@@ -138,20 +141,18 @@ fun FileResultCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                MatchBadge(matchType = result.matchType)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // معلومات الحجم والتاريخ والامتداد
-            Row(
+            // شارات النوع، التطابق، الحجم، والتاريخ داخل FlowRow يتكيف مع الشاشات الصغيرة والكبيرة
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                MatchBadge(matchType = result.matchType)
+
                 if (result.file.extension.isNotBlank()) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
@@ -209,7 +210,10 @@ fun FileResultCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.Article,
                                     contentDescription = null,
@@ -218,10 +222,12 @@ fun FileResultCard(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "مقتطف المحتوى الداخلي:",
+                                    text = "مقتطف المحتوى:",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
 
@@ -232,7 +238,7 @@ fun FileResultCard(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .clickable { onCopyText(result.snippet, "مقتطف الملف") }
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
@@ -253,7 +259,7 @@ fun FileResultCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // أزرار العمليات السريعة (فتح، مشاركة، نسخ المسار)
             Row(
@@ -263,7 +269,7 @@ fun FileResultCard(
             ) {
                 IconButton(
                     onClick = { onCopyText(result.file.filePath, "مسار الملف") },
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
@@ -276,7 +282,7 @@ fun FileResultCard(
                 if (!result.file.isDirectory) {
                     IconButton(
                         onClick = { onShare(fileObj) },
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -335,14 +341,14 @@ fun MatchBadge(matchType: MatchType) {
     }
 
     Surface(
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(6.dp),
         color = badgeBg
     ) {
         Text(
             text = badgeText,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             color = badgeTextColor,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
 }

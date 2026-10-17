@@ -9,9 +9,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,16 +19,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContactSupport
 import androidx.compose.material.icons.filled.Fingerprint
@@ -38,8 +44,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +73,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -149,16 +154,6 @@ fun MainScreen(
         }
     }
 
-    val quickSearchSuggestions = remember {
-        listOf(
-            "ابراهيم احمد",
-            "حيدر فؤاد",
-            "كتاب البرمجة",
-            "ميزانية",
-            "تقرير المشروع"
-        )
-    }
-
     // دعم كامل للاتجاه من اليمين لليسار (RTL) للغة العربية
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         if (isLocked) {
@@ -178,306 +173,381 @@ fun MainScreen(
                 }
             )
         } else {
-            Scaffold(
-                modifier = modifier.fillMaxSize(),
-                topBar = {
-                    TopAppBar(
-                        title = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "DeepFinder",
-                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
-                                        ) {
-                                            Text(
-                                                text = "v1.0",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                                color = MaterialTheme.colorScheme.tertiary,
-                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "محرك البحث الذكي الشامل للهاتف",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        },
-                        actions = {
-                            // زر تواصل معنا البارز في الشريط العلوي
-                            FilledTonalButton(
-                                onClick = { showContactDialog = true },
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                                modifier = Modifier
-                                    .height(36.dp)
-                                    .testTag("contact_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContactSupport,
-                                    contentDescription = "تواصل معنا",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "تواصل معنا",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                                )
-                            }
+            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+                val screenWidth = maxWidth
+                val isCompactWidth = screenWidth < 390.dp
+                val isExpandedScreen = screenWidth >= 600.dp
+                val horizontalPadding = if (screenWidth < 360.dp) 10.dp else 14.dp
 
-                            // زر إعادة الفهرسة
-                            IconButton(
-                                onClick = { viewModel.startIndexing(clearExisting = false) },
-                                modifier = Modifier.testTag("reindex_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Refresh,
-                                    contentDescription = "تحديث الفهرس",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-
-                            // زر الإعدادات
-                            IconButton(
-                                onClick = { showSettingsDialog = true },
-                                modifier = Modifier.testTag("settings_button")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "الإعدادات",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    )
-                }
-            ) { innerPadding ->
-                Column(
+                Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    // قسم رأس البحث الثابت (Persistent Sticky Search Header)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 2.dp
+                        .imePadding(),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "DeepFinder",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f)
+                                    ) {
+                                        Text(
+                                            text = "v1.0",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            actions = {
+                                if (isCompactWidth) {
+                                    IconButton(
+                                        onClick = { showContactDialog = true },
+                                        modifier = Modifier.testTag("contact_button")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContactSupport,
+                                            contentDescription = "تواصل معنا",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                } else {
+                                    FilledTonalButton(
+                                        onClick = { showContactDialog = true },
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier
+                                            .height(34.dp)
+                                            .testTag("contact_button")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContactSupport,
+                                            contentDescription = "تواصل معنا",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "تواصل معنا",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                IconButton(
+                                    onClick = { viewModel.startIndexing(clearExisting = false) },
+                                    modifier = Modifier.testTag("reindex_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "تحديث الفهرس",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { showSettingsDialog = true },
+                                    modifier = Modifier.testTag("settings_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "الإعدادات",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            // شريط البحث الدائم بالأعلى مع أيقونة الميكروفون للبحث الصوتي
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                        // رأس البحث الثابت (Persistent Search Header) متناسق مع جميع أحجام الهواتف
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 2.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                OutlinedTextField(
-                                    value = query,
-                                    onValueChange = { viewModel.onQueryChange(it) },
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .testTag("search_text_input"),
-                                    placeholder = {
-                                        Text(
-                                            text = "ابحث نصياً أو صوتياً في أسماء ومحتوى الملفات...",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        if (isSearching) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.primary
+                                        .widthIn(max = 840.dp)
+                                        .padding(horizontal = horizontalPadding, vertical = 6.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = query,
+                                        onValueChange = { viewModel.onQueryChange(it) },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("search_text_input"),
+                                        placeholder = {
+                                            Text(
+                                                text = "ابحث في الأسماء أو المحتوى...",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Default.Search,
-                                                contentDescription = "بحث",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    },
-                                    trailingIcon = {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(end = 4.dp)
-                                        ) {
-                                            if (query.isNotEmpty()) {
-                                                IconButton(
-                                                    onClick = { viewModel.clearQuery() },
-                                                    modifier = Modifier.testTag("clear_search_button")
-                                                ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Clear,
-                                                        contentDescription = "مسح النص"
-                                                    )
-                                                }
-                                            }
-                                            IconButton(
-                                                onClick = onVoiceSearchClick,
-                                                modifier = Modifier.testTag("voice_search_button")
-                                            ) {
+                                        },
+                                        leadingIcon = {
+                                            if (isSearching) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(18.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            } else {
                                                 Icon(
-                                                    imageVector = Icons.Default.Mic,
-                                                    contentDescription = "بحث صوتي (Speech-to-Text)",
+                                                    imageVector = Icons.Default.Search,
+                                                    contentDescription = "بحث",
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
-                                        }
-                                    },
-                                    singleLine = true,
-                                    shape = RoundedCornerShape(24.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                        },
+                                        trailingIcon = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(end = 2.dp)
+                                            ) {
+                                                if (query.isNotEmpty()) {
+                                                    IconButton(
+                                                        onClick = { viewModel.clearQuery() },
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .testTag("clear_search_button")
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Clear,
+                                                            contentDescription = "مسح النص",
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                                IconButton(
+                                                    onClick = onVoiceSearchClick,
+                                                    modifier = Modifier
+                                                        .size(38.dp)
+                                                        .testTag("voice_search_button")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Mic,
+                                                        contentDescription = "بحث صوتي (Speech-to-Text)",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        singleLine = true,
+                                        shape = RoundedCornerShape(22.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                                        )
                                     )
-                                )
-                            }
+                                }
 
-                            // اقتراحات بحث سريعة عند خلو حقل البحث
-                            if (query.isBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .widthIn(max = 840.dp)
+                                ) {
+                                    FilterChipsRow(
+                                        selectedFilter = filter,
+                                        onFilterSelected = { viewModel.onFilterChange(it) }
+                                    )
+                                }
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        .widthIn(max = 840.dp)
+                                        .padding(horizontal = horizontalPadding + 2.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Bolt,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.tertiary,
-                                        modifier = Modifier.size(16.dp)
-                                    )
                                     Text(
-                                        text = "بحث سريع:",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = if (query.isNotBlank())
+                                            "النتائج المطابقة: ${searchResults.size}"
+                                        else
+                                            "الملفات المفهرسة (${searchResults.size})",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
                                     )
-                                    quickSearchSuggestions.forEach { suggestion ->
-                                        AssistChip(
-                                            onClick = { viewModel.onQueryChange(suggestion) },
-                                            label = {
-                                                Text(
-                                                    text = suggestion,
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
-                                            },
-                                            colors = AssistChipDefaults.assistChipColors(
-                                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                            )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "الفهرس: $totalIndexed",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1
+                                    )
+                                }
+
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+
+                        // منطقة المحتوى القابلة للتمرير بالكامل لمنع تكدس الشاشة على الهواتف الصغيرة أو الوضع الأفقي
+                        if (searchResults.isEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .widthIn(max = 840.dp)
+                                ) {
+                                    IndexingBanner(state = indexingState)
+                                }
+
+                                if (!hasStoragePermission) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .widthIn(max = 840.dp)
+                                    ) {
+                                        PermissionBanner(
+                                            onRequestPermission = {
+                                                val intent = FileHelper.requestStoragePermissionIntent(context)
+                                                context.startActivity(intent)
+                                            }
                                         )
                                     }
                                 }
+
+                                EmptyResultsView(
+                                    query = query,
+                                    onStartIndexing = { viewModel.startIndexing(clearExisting = true) }
+                                )
                             }
-
-                            // شريط الفلاتر السريعة
-                            FilterChipsRow(
-                                selectedFilter = filter,
-                                onFilterSelected = { viewModel.onFilterChange(it) }
-                            )
-
-                            // شريط الإحصائيات اللحظية الثابت
-                            Row(
+                        } else if (isExpandedScreen) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 320.dp),
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .fillMaxSize()
+                                    .widthIn(max = 1100.dp)
+                                    .testTag("search_results_list"),
+                                contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(
-                                    text = if (query.isNotBlank())
-                                        "النتائج المطابقة لـ \"$query\": ${searchResults.size} نتيجة"
-                                    else
-                                        "أحدث الملفات المفهرسة (${searchResults.size})",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "إجمالي الفهرس: $totalIndexed عنصر",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
-                        }
-                    }
-
-                    // بطاقة حالة الفهرسة الذكية
-                    IndexingBanner(state = indexingState)
-
-                    // تنبيه الصلاحية في حال عدم التفعيل
-                    if (!hasStoragePermission) {
-                        PermissionBanner(
-                            onRequestPermission = {
-                                val intent = FileHelper.requestStoragePermissionIntent(context)
-                                context.startActivity(intent)
-                            }
-                        )
-                    }
-
-                    // القائمة الكسولة (LazyColumn) لعرض نتائج البحث اللحظية
-                    if (searchResults.isEmpty()) {
-                        EmptyResultsView(
-                            query = query,
-                            onStartIndexing = { viewModel.startIndexing(clearExisting = true) }
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag("search_results_list"),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            items(
-                                items = searchResults,
-                                key = { it.file.id }
-                            ) { item ->
-                                FileResultCard(
-                                    result = item,
-                                    onOpen = { file -> FileHelper.openFile(context, file) },
-                                    onShare = { file -> FileHelper.shareFile(context, file) },
-                                    onCopyText = { text, label ->
-                                        FileHelper.copyToClipboard(context, text, label)
+                                if (indexingState.isIndexing) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        IndexingBanner(state = indexingState)
                                     }
-                                )
+                                }
+                                if (!hasStoragePermission) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        PermissionBanner(
+                                            onRequestPermission = {
+                                                val intent = FileHelper.requestStoragePermissionIntent(context)
+                                                context.startActivity(intent)
+                                            }
+                                        )
+                                    }
+                                }
+                                items(
+                                    items = searchResults,
+                                    key = { it.file.id }
+                                ) { item ->
+                                    FileResultCard(
+                                        result = item,
+                                        onOpen = { file -> FileHelper.openFile(context, file) },
+                                        onShare = { file -> FileHelper.shareFile(context, file) },
+                                        onCopyText = { text, label ->
+                                            FileHelper.copyToClipboard(context, text, label)
+                                        }
+                                    )
+                                }
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
                             }
-                            item {
-                                Spacer(modifier = Modifier.height(30.dp))
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag("search_results_list"),
+                                contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (indexingState.isIndexing) {
+                                    item {
+                                        IndexingBanner(state = indexingState)
+                                    }
+                                }
+                                if (!hasStoragePermission) {
+                                    item {
+                                        PermissionBanner(
+                                            onRequestPermission = {
+                                                val intent = FileHelper.requestStoragePermissionIntent(context)
+                                                context.startActivity(intent)
+                                            }
+                                        )
+                                    }
+                                }
+                                items(
+                                    items = searchResults,
+                                    key = { it.file.id }
+                                ) { item ->
+                                    FileResultCard(
+                                        result = item,
+                                        onOpen = { file -> FileHelper.openFile(context, file) },
+                                        onShare = { file -> FileHelper.shareFile(context, file) },
+                                        onCopyText = { text, label ->
+                                            FileHelper.copyToClipboard(context, text, label)
+                                        }
+                                    )
+                                }
+                                item {
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
                             }
                         }
                     }
@@ -555,17 +625,18 @@ fun EmptyResultsView(
 ) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
+            modifier = Modifier.widthIn(max = 460.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
@@ -574,32 +645,33 @@ fun EmptyResultsView(
                     imageVector = if (query.isNotBlank()) Icons.Default.SearchOff else Icons.Default.Search,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = if (query.isNotBlank()) "لم يتم العثور على نتائج" else "ابدأ البحث الفوري الآن",
+                text = if (query.isNotBlank()) "لم يتم العثور على نتائج" else "فهرس ملفات هاتفك للبحث الفوري",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = if (query.isNotBlank())
-                    "لا يوجد ملف يحتوي على \"$query\" في اسمه أو نصه الداخلي. تأكد من تفعيل الصلاحية وفهرسة الملفات."
+                    "لا يوجد ملف يحتوي على \"$query\" في اسمه أو نصه الداخلي. تأكد من تفعيل صلاحية الملفات وتحديث الفهرس."
                 else
-                    "اكتب أي كلمة أو اضغط على أيقونة الميكروفون للبحث الصوتي الفوري في مستندات PDF و Word و Excel والنصوص في هاتفك.",
+                    "امنح صلاحية الوصول للملفات ثم اضغط على زر الفهرسة بالأسفل لمسح مستنداتك الحقيقية (PDF, Word, Excel, النصوص) والبحث بداخلها.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Button(
                 onClick = onStartIndexing,
@@ -607,7 +679,7 @@ fun EmptyResultsView(
             ) {
                 Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("إعادة مسح وفهرسة الملفات")
+                Text("مسح وفهرسة ملفات الهاتف")
             }
         }
     }
@@ -621,60 +693,67 @@ fun BiometricLockScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(90.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+            Column(
+                modifier = Modifier.widthIn(max = 420.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "قفل",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(46.dp)
-                )
-            }
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "قفل",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(46.dp)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "DeepFinder مقفل",
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "تم تفعيل حماية البصمة لضمان خصوصية نتائج البحث وملفاتك الحساسة.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = onUnlockClicked,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
-            ) {
-                Icon(imageVector = Icons.Default.Fingerprint, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "فتح القفل بالبصمة أو الرمز",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    text = "DeepFinder مقفل",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "تم تفعيل حماية البصمة لضمان خصوصية نتائج البحث وملفاتك الحساسة.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Button(
+                    onClick = onUnlockClicked,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Fingerprint, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "فتح القفل بالبصمة أو الرمز",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
         }
     }

@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,6 +17,9 @@ interface FileDao {
 
     @Query("DELETE FROM indexed_files WHERE filePath = :path")
     suspend fun deleteByPath(path: String)
+
+    @Query("DELETE FROM indexed_files WHERE filePath LIKE '%مستندات_DeepFinder%'")
+    suspend fun deleteDemoFiles()
 
     @Query("DELETE FROM indexed_files")
     suspend fun clearAll()

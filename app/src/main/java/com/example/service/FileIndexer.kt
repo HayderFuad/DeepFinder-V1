@@ -3,6 +3,7 @@ package com.example.service
 import android.content.Context
 import android.os.Environment
 import com.example.data.AppDatabase
+import com.example.data.FileDao
 import com.example.data.IndexedFile
 import com.example.parser.DocumentParser
 import com.example.util.ArabicNormalizer
@@ -47,80 +48,27 @@ object FileIndexer {
     )
 
     /**
-     * إنشاء ملفات تجريبية غنية بالمحتوى والأسماء لاختبار البحث الفوري والمطابقة المباشرة
+     * إزالة أي ملفات تجريبية قديمة إن وجدت من قاعدة البيانات أو التخزين
      */
-    fun createSampleFilesIfEmpty(context: Context) {
-        val samplesDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "مستندات_DeepFinder")
-        if (!samplesDir.exists()) {
-            samplesDir.mkdirs()
-        }
+    suspend fun cleanupLegacyDemoFiles(context: Context) = withContext(Dispatchers.IO) {
+        try {
+            val db = AppDatabase.getDatabase(context)
+            db.fileDao().deleteDemoFiles()
 
-        val bookFile = File(samplesDir, "كتاب_البرمجة_بلغة_كوتلن.txt")
-        if (!bookFile.exists()) {
-            bookFile.writeText(
-                "كتاب البرمجة الشامل للمطورين:\n" +
-                        "تعلم تطوير تطبيقات أندرويد الحديثة باستخدام لغة كوتلن (Kotlin) مع واجهات Jetpack Compose " +
-                        "ومحركات البحث الفوري ومكتبة Room وتقنيات Clean Architecture و Material Design 3.\n" +
-                        "يحتوي الكتاب على أمثلة عملية لبناء تطبيقات احترافية وسريعة الأداء."
-            )
-        }
-
-        val reportFile = File(samplesDir, "تقرير_المشروع_الهندسي.txt")
-        if (!reportFile.exists()) {
-            reportFile.writeText(
-                "الجمهورية اليمنية - مشروع التخرج الهندسي والتقني 2026\n" +
-                        "عنوان المشروع: محرك البحث الذكي الشامل للهاتف (DeepFinder Android).\n" +
-                        "أعد هذا المشروع المهندس ابراهيم احمد محمد حاتم بالتعاون مع المهندس حيدر فؤاد.\n" +
-                        "يقوم التطبيق بالبحث في أسماء الملفات ومحتواها الداخلي بسرعة فائقة مع الحفاظ على الخصوصية الكاملة وبدون إنترنت."
-            )
-        }
-
-        val notesFile = File(samplesDir, "قائمة_المهام_والملاحظات.md")
-        if (!notesFile.exists()) {
-            notesFile.writeText(
-                "# خطة عمل وتطوير تطبيق DeepFinder\n" +
-                        "- [x] بناء محرك تطبيع الحروف العربية Arabic Normalizer لدعم همزات إبراهيم أحمد وحيدر فؤاد.\n" +
-                        "- [x] دعم استخراج النصوص من ملفات PDF و Word و Excel والنصوص البرمجية.\n" +
-                        "- [x] إضافة القفل ببصمة الإصبع Biometric Lock لحماية خصوصية المستخدم.\n" +
-                        "- [ ] تحديث فهرس الملفات تلقائياً عند إضافة أي مستند جديد."
-            )
-        }
-
-        val teamFile = File(samplesDir, "بيانات_فريق_العمل.json")
-        if (!teamFile.exists()) {
-            teamFile.writeText(
-                "{\n" +
-                        "  \"project\": \"DeepFinder Android\",\n" +
-                        "  \"engineers\": [\n" +
-                        "    {\"name\": \"ابراهيم احمد محمد حاتم\", \"role\": \"Architect & Security\", \"phone\": \"+967734414267\"},\n" +
-                        "    {\"name\": \"حيدر فؤاد\", \"role\": \"Lead Android Architect\", \"phone\": \"+967776797221\"}\n" +
-                        "  ]\n" +
-                        "}"
-            )
-        }
-
-        val budgetFile = File(samplesDir, "ميزانية_المشروع_2026.csv")
-        if (!budgetFile.exists()) {
-            budgetFile.writeText(
-                "البند,المبلغ,المسؤول,الحالة\n" +
-                        "تراخيص الفهرسة,0,ابراهيم احمد محمد حاتم,مكتمل (مفتوح المصدر)\n" +
-                        "سيرفرات سحابية,0,حيدر فؤاد,ملغي (أوفلاين 100% بدون إنترنت)\n" +
-                        "أدوات الاختبار,200,فريق التطوير,معتمد"
-            )
-        }
-
-        val logFile = File(samplesDir, "سجل_العمليات_التقنية.log")
-        if (!logFile.exists()) {
-            logFile.writeText(
-                "[INFO] 2026-10-16 08:30:12 - تم تشغيل محرك الفهرسة بنجاح.\n" +
-                        "[INFO] 2026-10-16 08:30:15 - تمت معالجة كتاب البرمجة وتطبيع النصوص العربية.\n" +
-                        "[SUCCESS] جاهز للبحث والاستعلام الفوري."
-            )
+            val extSampleDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "مستندات_DeepFinder")
+            if (extSampleDir.exists()) {
+                extSampleDir.deleteRecursively()
+            }
+            val intSampleDir = File(context.filesDir, "مستندات_DeepFinder")
+            if (intSampleDir.exists()) {
+                intSampleDir.deleteRecursively()
+            }
+        } catch (_: Exception) {
         }
     }
 
     /**
-     * بدء عملية الفهرسة الشاملة للهاتف
+     * بدء عملية الفهرسة الشاملة لملفات الهاتف الحقيقية فقط
      */
     suspend fun startIndexing(context: Context, clearExisting: Boolean = false) = withContext(Dispatchers.IO) {
         if (_indexingState.value.isIndexing) return@withContext
@@ -131,8 +79,8 @@ object FileIndexer {
         // تهيئة محرك PDFBox
         DocumentParser.init(context)
 
-        // إنشاء ملفات توضيحية تجريبية للبحث السريع
-        createSampleFilesIfEmpty(context)
+        // تنظيف أي ملفات تجريبية قديمة
+        cleanupLegacyDemoFiles(context)
 
         if (clearExisting) {
             dao.clearAll()
@@ -142,18 +90,12 @@ object FileIndexer {
             isIndexing = true,
             totalScanned = 0,
             totalIndexed = dao.getTotalCount(),
-            currentFileName = "جاري تحضير الملفات...",
+            currentFileName = "جاري فحص ملفات الهاتف...",
             progress = 0.05f
         )
 
-        // تحديد مسارات المسح
+        // تحديد مسارات المسح الحقيقية على الهاتف
         val searchRoots = mutableListOf<File>()
-
-        // 1. مجلد المستندات التجريبي للتطبيق
-        val sampleDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "مستندات_DeepFinder")
-        if (sampleDir.exists()) searchRoots.add(sampleDir)
-
-        // 2. مجلدات التخزين الخارجي
         val externalStorage = Environment.getExternalStorageDirectory()
         if (externalStorage != null && externalStorage.exists() && externalStorage.canRead()) {
             searchRoots.add(externalStorage)
@@ -161,7 +103,7 @@ object FileIndexer {
 
         val allFilesToProcess = mutableListOf<File>()
 
-        // جمع الملفات أولاً
+        // جمع الملفات من مسارات التخزين
         for (root in searchRoots) {
             collectFiles(root, allFilesToProcess)
             if (!coroutineContext.isActive) return@withContext
@@ -218,7 +160,7 @@ object FileIndexer {
                     _indexingState.value = _indexingState.value.copy(totalIndexed = newCount)
                     batch.clear()
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // تجاوز الملفات غير القابلة للقراءة
             }
         }
@@ -245,14 +187,13 @@ object FileIndexer {
 
         val nameLower = dir.name.lowercase(Locale.ROOT)
         if (IGNORED_DIR_NAMES.contains(nameLower) || dir.name.startsWith(".")) {
-            // تجاهل المجلدات الخفية والنظامية
-            if (!dir.name.contains("مستندات_DeepFinder")) return
+            return
         }
 
         val children = dir.listFiles() ?: return
         for (child in children) {
             val childLower = child.name.lowercase(Locale.ROOT)
-            if (IGNORED_DIR_NAMES.contains(childLower) || (child.name.startsWith(".") && !child.name.contains("مستندات_DeepFinder"))) {
+            if (IGNORED_DIR_NAMES.contains(childLower) || child.name.startsWith(".")) {
                 continue
             }
 
