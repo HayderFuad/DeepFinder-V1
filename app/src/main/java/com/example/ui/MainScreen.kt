@@ -1,6 +1,13 @@
 package com.example.ui
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.speech.RecognizerIntent
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +33,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContactSupport
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -63,6 +71,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.ContactDialog
@@ -71,6 +80,7 @@ import com.example.ui.components.FilterChipsRow
 import com.example.ui.components.IndexingBanner
 import com.example.ui.components.PermissionBanner
 import com.example.ui.components.SettingsDialog
+import com.example.ui.components.VoiceSearchDialog
 import com.example.util.BiometricHelper
 import com.example.util.FileHelper
 
@@ -96,6 +106,48 @@ fun MainScreen(
 
     var showContactDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showVoiceDialog by remember { mutableStateOf(false) }
+
+    // مشغل نشاط التعرف الصوتي للنظام (Fallback)
+    val speechIntentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            val spokenText = matches?.firstOrNull()?.trim().orEmpty()
+            if (spokenText.isNotEmpty()) {
+                viewModel.onQueryChange(spokenText)
+            }
+        }
+    }
+
+    // مشغل طلب صلاحية الميكروفون (RECORD_AUDIO)
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showVoiceDialog = true
+        } else {
+            Toast.makeText(
+                context,
+                "يلزم منح صلاحية الميكروفون لاستخدام البحث الصوتي",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    val onVoiceSearchClick = {
+        val hasAudioPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasAudioPermission) {
+            showVoiceDialog = true
+        } else {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     val quickSearchSuggestions = remember {
         listOf(
@@ -238,7 +290,7 @@ fun MainScreen(
                         tonalElevation = 2.dp
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            // شريط البحث الدائم بالأعلى
+                            // شريط البحث الدائم بالأعلى مع أيقونة الميكروفون للبحث الصوتي
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -252,7 +304,7 @@ fun MainScreen(
                                         .testTag("search_text_input"),
                                     placeholder = {
                                         Text(
-                                            text = "ابحث فوراً في أسماء أو محتوى الملفات...",
+                                            text = "ابحث نصياً أو صوتياً في أسماء ومحتوى الملفات...",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                         )
@@ -273,14 +325,29 @@ fun MainScreen(
                                         }
                                     },
                                     trailingIcon = {
-                                        if (query.isNotEmpty()) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(end = 4.dp)
+                                        ) {
+                                            if (query.isNotEmpty()) {
+                                                IconButton(
+                                                    onClick = { viewModel.clearQuery() },
+                                                    modifier = Modifier.testTag("clear_search_button")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Clear,
+                                                        contentDescription = "مسح النص"
+                                                    )
+                                                }
+                                            }
                                             IconButton(
-                                                onClick = { viewModel.clearQuery() },
-                                                modifier = Modifier.testTag("clear_search_button")
+                                                onClick = onVoiceSearchClick,
+                                                modifier = Modifier.testTag("voice_search_button")
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Clear,
-                                                    contentDescription = "مسح النص"
+                                                    imageVector = Icons.Default.Mic,
+                                                    contentDescription = "بحث صوتي (Speech-to-Text)",
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                         }
@@ -417,6 +484,37 @@ fun MainScreen(
                 }
             }
 
+            // نافذة البحث الصوتي (Speech-to-Text)
+            if (showVoiceDialog) {
+                VoiceSearchDialog(
+                    onResult = { recognizedText ->
+                        showVoiceDialog = false
+                        viewModel.onQueryChange(recognizedText)
+                    },
+                    onLaunchSystemRecognizer = { lang ->
+                        showVoiceDialog = false
+                        try {
+                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(
+                                    RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                                )
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang)
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث الآن للبحث في ملفاتك...")
+                            }
+                            speechIntentLauncher.launch(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                context,
+                                "خدمة التعرف الصوتي غير مدعومة على هذا الجهاز",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    onDismiss = { showVoiceDialog = false }
+                )
+            }
+
             // نافذة تواصل معنا المنبثقة
             if (showContactDialog) {
                 ContactDialog(onDismiss = { showContactDialog = false })
@@ -494,7 +592,7 @@ fun EmptyResultsView(
                 text = if (query.isNotBlank())
                     "لا يوجد ملف يحتوي على \"$query\" في اسمه أو نصه الداخلي. تأكد من تفعيل الصلاحية وفهرسة الملفات."
                 else
-                    "اكتب أي كلمة في شريط البحث بالأعلى للبحث الفوري في مستندات PDF و Word و Excel والنصوص والملفات في هاتفك.",
+                    "اكتب أي كلمة أو اضغط على أيقونة الميكروفون للبحث الصوتي الفوري في مستندات PDF و Word و Excel والنصوص في هاتفك.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
