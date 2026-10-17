@@ -117,12 +117,15 @@ fun MainScreen(
     val speechIntentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val spokenText = matches?.firstOrNull()?.trim().orEmpty()
-            if (spokenText.isNotEmpty()) {
-                viewModel.onQueryChange(spokenText)
+        try {
+            if (result.resultCode == Activity.RESULT_OK) {
+                val matches = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                val spokenText = matches?.firstOrNull()?.trim().orEmpty()
+                if (spokenText.isNotEmpty()) {
+                    viewModel.onQueryChange(spokenText)
+                }
             }
+        } catch (_: Throwable) {
         }
     }
 
@@ -141,16 +144,20 @@ fun MainScreen(
         }
     }
 
-    val onVoiceSearchClick = {
-        val hasAudioPermission = ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECORD_AUDIO
-        ) == PackageManager.PERMISSION_GRANTED
+    val onVoiceSearchClick: () -> Unit = {
+        try {
+            val hasAudioPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
 
-        if (hasAudioPermission) {
+            if (hasAudioPermission) {
+                showVoiceDialog = true
+            } else {
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        } catch (_: Throwable) {
             showVoiceDialog = true
-        } else {
-            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
 
@@ -557,6 +564,7 @@ fun MainScreen(
             // نافذة البحث الصوتي (Speech-to-Text)
             if (showVoiceDialog) {
                 VoiceSearchDialog(
+                    indexedFileNames = searchResults.map { it.file.fileName }.distinct().take(6),
                     onResult = { recognizedText ->
                         showVoiceDialog = false
                         viewModel.onQueryChange(recognizedText)
@@ -573,7 +581,7 @@ fun MainScreen(
                                 putExtra(RecognizerIntent.EXTRA_PROMPT, "تحدث الآن للبحث في ملفاتك...")
                             }
                             speechIntentLauncher.launch(intent)
-                        } catch (e: Exception) {
+                        } catch (_: Throwable) {
                             Toast.makeText(
                                 context,
                                 "خدمة التعرف الصوتي غير مدعومة على هذا الجهاز",
